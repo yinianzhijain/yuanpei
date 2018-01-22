@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<!-- 配置扫描文件jdbc.properties因为只能扫描一次,再加之又多个properties文件所以要加多个 -->
+	<context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties"/>
+	<!-- 配置扫描包:service -->
+	<context:component-scan base-package="com.east.workos.service.impl"></context:component-scan>
+	
+	<!-- 数据源 -->
+	<bean id="db" class="com.alibaba.druid.pool.DruidDataSource">
+		<property name="url" value="${jdbc.url}"></property>
+		<property name="username" value="${jdbc.uname}"></property>
+		<property name="password" value="${jdbc.pwd}"></property>
+		<property name="driverClassName" value="${jdbc.driver}"></property>
+	</bean>
+	
+	<!-- session工厂 -->
+	<bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="db"></property>
+		<!-- 给实体类取一个别名 -->
+		<!-- <property name="typeAliasesPackage" value="com.baidu.pojo"></property> -->
+	</bean>
+	<!-- 接口代理 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="sqlSessionFactoryBeanName" value="sessionFactory"></property>
+		<property name="basePackage" value="com.baidu.mapper"></property>
+	</bean>
+	
+	<!-- 事务管理器 -->
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="db"></property>
+	</bean>
+	
+	<!-- 哪些方法需要事务处理 -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="insert*"/>
+			<tx:method name="save*"/>
+			<tx:method name="add*"/>
+			<tx:method name="del*"/>
+			<tx:method name="delete*"/>
+			<tx:method name="update*"/>
+			<tx:method name="get*" read-only="true"/>
+			<tx:method name="find*" read-only="true"/>
+			<tx:method name="select*" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	<!-- 事务切面 -->
+	<aop:config>
+		<aop:pointcut expression="execution(* com.east.workos.service.impl.*.*(..))" id="pc"/>
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pc"/>
+	</aop:config>
+</beans>
